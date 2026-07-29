@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starter Backend</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.card{
+    width:420px;
+    background:#1e293b;
+    padding:35px;
+    border-radius:15px;
+    text-align:center;
+    box-shadow:0 0 30px rgba(0,0,0,.35);
+}
+
+h1{
+    margin-bottom:10px;
+}
+
+p{
+    color:#94a3b8;
+    margin-bottom:25px;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:12px;
+    border:none;
+    border-radius:8px;
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+    font-size:16px;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+#status{
+    margin-top:20px;
+    color:#22c55e;
+}
+</style>
+
+</head>
+<body>
+
+<div class="card">
+
+<h1>Starter Backend</h1>
+
+<p>Login or create an account to continue.</p>
+
+<button onclick="goLogin()">Login</button>
+<button onclick="goSignup()">Create Account</button>
+
+<div id="status">Connecting...</div>
+
+</div>
+
+<script>
+let BACKEND = "";
+
+async function loadBackend(){
+
+    try{
+
+        const r = await fetch("server.txt?" + Date.now());
+
+        BACKEND = (await r.text()).trim();
+
+        if(!BACKEND.startsWith("http")){
+            throw new Error();
+        }
+
+        status.innerText = "Backend Connected";
+
+    }catch{
+
+        status.innerText = "Backend Offline";
+
+    }
+
+}
+
+async function api(path,options={}){
+
+    if(!BACKEND){
+        await loadBackend();
+    }
+
+    return fetch(BACKEND + path,options);
+
+}
+
+async function checkLogin(){
+
+    const token = localStorage.getItem("token");
+
+    if(!token) return;
+
+    try{
+
+        const r = await api("/me",{
+            headers:{
+                Authorization:token
+            }
+        });
+
+        const d = await r.json();
+
+        if(d.success){
+            location.href = "dashboard.html";
+        }else{
+            localStorage.removeItem("token");
+        }
+
+    }catch{}
+
+}
+
+function goLogin(){
+    location.href="login.html";
+}
+
+function goSignup(){
+    location.href="signup.html";
+}
+
+(async()=>{
+    await loadBackend();
+    await checkLogin();
+})();
+</script>
+
+</body>
+</html>
