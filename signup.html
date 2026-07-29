@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#0f172a;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    color:white;
+}
+
+.card{
+    width:360px;
+    background:#1e293b;
+    padding:30px;
+    border-radius:15px;
+    box-shadow:0 0 30px rgba(0,0,0,.35);
+}
+
+h1{
+    text-align:center;
+    margin-bottom:25px;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    border:none;
+    outline:none;
+    border-radius:8px;
+    background:#334155;
+    color:white;
+    margin-top:12px;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:20px;
+    border:none;
+    border-radius:8px;
+    background:#16a34a;
+    color:white;
+    cursor:pointer;
+    font-size:16px;
+}
+
+button:hover{
+    background:#15803d;
+}
+
+#error{
+    margin-top:15px;
+    text-align:center;
+    color:#ef4444;
+}
+
+#success{
+    margin-top:15px;
+    text-align:center;
+    color:#22c55e;
+}
+
+#loading{
+    margin-top:10px;
+    text-align:center;
+    color:#94a3b8;
+    font-size:14px;
+}
+
+.bottom{
+    margin-top:20px;
+    text-align:center;
+}
+
+a{
+    color:#60a5fa;
+    text-decoration:none;
+}
+</style>
+
+</head>
+<body>
+
+<div class="card">
+
+<h1>Create Account</h1>
+
+<input id="username" placeholder="Username">
+<input id="password" type="password" placeholder="Password">
+
+<button onclick="signup()">Create Account</button>
+
+<div id="loading">Connecting...</div>
+<div id="success"></div>
+<div id="error"></div>
+
+<div class="bottom">
+Already have an account?
+<a href="login.html">Login</a>
+</div>
+
+</div>
+
+<script>
+let BACKEND = "";
+
+async function loadBackend(){
+    try{
+        const r = await fetch("server.txt?" + Date.now());
+        BACKEND = (await r.text()).trim();
+
+        if(!BACKEND.startsWith("http")){
+            throw new Error();
+        }
+
+        loading.innerText = "Connected";
+    }catch{
+        loading.innerText = "Couldn't load backend";
+    }
+}
+
+async function api(path, options = {}){
+
+    if(!BACKEND){
+        await loadBackend();
+    }
+
+    return fetch(BACKEND + path, options);
+}
+
+async function signup(){
+
+    error.innerText = "";
+    success.innerText = "";
+
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+
+    if(username.length < 3){
+        error.innerText = "Username must be at least 3 characters.";
+        return;
+    }
+
+    if(password.length < 4){
+        error.innerText = "Password must be at least 4 characters.";
+        return;
+    }
+
+    try{
+
+        const r = await api("/signup",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                username,
+                password
+            })
+        });
+
+        const d = await r.json();
+
+        if(!d.success){
+            error.innerText = d.error || "Signup failed.";
+            return;
+        }
+
+        const login = await api("/login",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                username,
+                password
+            })
+        });
+
+        const user = await login.json();
+
+        if(user.success){
+            localStorage.setItem("token", user.token);
+        }
+
+        success.innerHTML = "Account created.<br>User ID: <b>"+d.userId+"</b>";
+
+        setTimeout(()=>{
+            location.href = "dashboard.html";
+        },800);
+
+    }catch{
+        error.innerText = "Backend offline.";
+    }
+
+}
+
+async function autoLogin(){
+
+    const token = localStorage.getItem("token");
+
+    if(!token) return;
+
+    try{
+
+        const r = await api("/me",{
+            headers:{
+                Authorization:token
+            }
+        });
+
+        const d = await r.json();
+
+        if(d.success){
+            location.href = "dashboard.html";
+        }else{
+            localStorage.removeItem("token");
+        }
+
+    }catch{}
+
+}
+
+password.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+        signup();
+    }
+});
+
+(async()=>{
+    await loadBackend();
+    await autoLogin();
+})();
+</script>
+
+</body>
+</html>
