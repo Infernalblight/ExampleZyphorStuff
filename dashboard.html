@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+}
+
+header{
+    background:#1e293b;
+    padding:20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+button{
+    padding:10px 16px;
+    border:none;
+    border-radius:8px;
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+.container{
+    max-width:900px;
+    margin:40px auto;
+    padding:20px;
+}
+
+.card{
+    background:#1e293b;
+    border-radius:12px;
+    padding:25px;
+}
+
+.card h2{
+    margin-bottom:20px;
+}
+
+.info{
+    margin:12px 0;
+    padding:12px;
+    background:#334155;
+    border-radius:8px;
+    word-break:break-word;
+}
+
+#status{
+    margin-top:20px;
+    color:#22c55e;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+<h2>Dashboard</h2>
+<button onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h2>Your Account</h2>
+
+<div class="info">
+<b>User ID:</b>
+<span id="userid">Loading...</span>
+</div>
+
+<div class="info">
+<b>Username:</b>
+<span id="username">Loading...</span>
+</div>
+
+<div class="info">
+<b>Created:</b>
+<span id="created">Loading...</span>
+</div>
+
+<div class="info">
+<b>Session Token:</b>
+<span id="token">Loading...</span>
+</div>
+
+<div id="status">Loading...</div>
+
+</div>
+
+</div>
+
+<script>
+let BACKEND = "";
+
+async function loadBackend(){
+
+    const r = await fetch("server.txt?" + Date.now());
+
+    BACKEND = (await r.text()).trim();
+
+}
+
+async function api(path,options={}){
+
+    if(!BACKEND){
+        await loadBackend();
+    }
+
+    return fetch(BACKEND + path,options);
+
+}
+
+async function loadAccount(){
+
+    const tokenValue = localStorage.getItem("token");
+
+    if(!tokenValue){
+        location.href="login.html";
+        return;
+    }
+
+    try{
+
+        const r = await api("/me",{
+            headers:{
+                Authorization:tokenValue
+            }
+        });
+
+        const d = await r.json();
+
+        if(!d.success){
+            localStorage.removeItem("token");
+            location.href="login.html";
+            return;
+        }
+
+        userid.textContent = d.user.id;
+        username.textContent = d.user.username;
+        created.textContent = new Date(d.user.createdAt).toLocaleString();
+        token.textContent = tokenValue;
+
+        status.textContent = "Logged in";
+
+    }catch{
+
+        status.textContent = "Backend Offline";
+
+    }
+
+}
+
+async function logout(){
+
+    const tokenValue = localStorage.getItem("token");
+
+    try{
+
+        await api("/logout",{
+            method:"POST",
+            headers:{
+                Authorization:tokenValue
+            }
+        });
+
+    }catch{}
+
+    localStorage.removeItem("token");
+
+    location.href="login.html";
+
+}
+
+loadBackend().then(loadAccount);
+</script>
+
+</body>
+</html>
