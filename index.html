@@ -130,7 +130,7 @@ async function checkLogin(){
         const d = await r.json();
 
         if(d.success){
-            location.href = "dashboard.html";
+            location.href = "index.html";
         }else{
             localStorage.removeItem("token");
         }
